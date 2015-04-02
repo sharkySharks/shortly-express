@@ -2,6 +2,7 @@ var express = require('express');
 var util = require('./lib/utility'); 
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+var bcrypt = require('bcrypt-nodejs');
 
 /************************************************************/
 var session = require('express-session');
@@ -47,42 +48,36 @@ function(req, res) {
   res.render('signup');
 });
 
-var sess;
 /************************************************************/
 
 
 app.get('/', 
 function(req, res) {
- res.render('index');
 
-  // sess = req.session;
+  //res.render('index');
 
-  // if(sess.username) {
-  //   res.render('index');    
-  // } else {
-  //   res.redirect('/login');
-  // }
+  if(req.session.username) {
+    res.render('index');    
+  } else {
+    res.redirect('/login');
+  }
 });
 
 app.get('/create', 
 function(req, res) {
-  res.render('index');
+  // res.render('index');
 
-  // sess = req.session;
-
-  // if(sess.username) {
-  //   res.render('index');    
-  // } else {
-  //   res.redirect('/login');
-  // }
+  if(req.session.username) {
+    res.render('index');    
+  } else {
+    res.redirect('/login');
+  }
 });
 
 app.get('/links', 
 function(req, res) {
-   
 
-  sess = req.session;
-  if(!sess.username) {
+  if(!req.session.username) {
     res.redirect('/login');
   } else {
     Links.reset().fetch().then(function(links) {
@@ -126,6 +121,9 @@ function(req, res) {
   });
 });
 
+
+
+
 /************************************************************/
 // Write your authentication routes here
 /************************************************************/
@@ -153,22 +151,38 @@ function(req, res) {
   });
 });
 
+
 app.post('/login', 
 function(req, res) {
   var un = req.body.username;
   var pw = req.body.password;
 
-  var user = new User({
-    username: un,
-    password: pw
+  new User({
+    username: un
   }).fetch()
     .then(function(model) {
-      res.redirect('/')
+      if(model){
+        bcrypt.compare(pw, model.attributes.password, function(err, success){
+          if(err) {res.send('LOGIN ERROR')} // need to figure out error msg for wrong login criteria
+          if(success) {
+            console.log(model)
+            req.session.username = un;
+            res.redirect('/')
+          }
+        })
+      } else {
+        res.send('LOGIN ERROR: Please go back to login page and try your credentials again or signup for an account.');
+      }
     })
   }
 );
 
-
+app.get('/logout', 
+function(req, res) {
+  req.session.username = '';
+  res.redirect('/login');
+  }
+);
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
