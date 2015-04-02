@@ -29,7 +29,13 @@ app.use(express.static(__dirname + '/public'));
 
  
 /************************************************************/
-app.use(session({secret: 'foobar'}))
+app.use(session(
+  {
+    secret: 'foobar',
+    resave: false,
+    saveUninitialized: false
+  }
+))
 
 app.get('/login', 
 function(req, res) {
@@ -47,7 +53,7 @@ var sess;
 
 app.get('/', 
 function(req, res) {
-  res.render('index');
+ res.render('index');
 
   // sess = req.session;
 
@@ -61,7 +67,7 @@ function(req, res) {
 app.get('/create', 
 function(req, res) {
   res.render('index');
-  
+
   // sess = req.session;
 
   // if(sess.username) {
@@ -73,14 +79,16 @@ function(req, res) {
 
 app.get('/links', 
 function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.send(200, links.models);
-  });  
+   
 
-  // sess = req.session;
-  // if(!sess.username) {
-  //   res.redirect('/login');
-  // } 
+  sess = req.session;
+  if(!sess.username) {
+    res.redirect('/login');
+  } else {
+    Links.reset().fetch().then(function(links) {
+      res.send(200, links.models);
+    });
+  }
 
 });
 
@@ -122,6 +130,43 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
+app.post('/signup', 
+function(req, res) {
+  var un = req.body.username;
+  var pw = req.body.password;
+
+  new User({ username: un}).fetch().then(function(found) {
+    if (found) {
+      res.send(201)
+    } else {
+      var user = new User({
+        username: un,
+        password: pw
+      })
+
+      user.save().then(function(newUser) {
+        Users.add(newUser);
+        res.redirect('/login');
+        // res.send(200, newUser);
+      });
+    }
+  });
+});
+
+app.post('/login', 
+function(req, res) {
+  var un = req.body.username;
+  var pw = req.body.password;
+
+  var user = new User({
+    username: un,
+    password: pw
+  }).fetch()
+    .then(function(model) {
+      res.redirect('/')
+    })
+  }
+);
 
 
 
